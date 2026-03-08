@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Token Profile Scanner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0f; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; padding: 10px; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #00ff88; text-align: center; margin-bottom: 5px; font-size: 1.5rem; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 15px; font-size: 0.8rem; }
+        
+        /* Dashboard responsive */
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        .dash-card { background: #12121a; padding: 10px; border-radius: 8px; text-align: center; }
+        .dash-card h4 { color: #666; font-size: 0.55rem; text-transform: uppercase; }
+        .dash-card .value { font-size: 1.1rem; font-weight: bold; }
+        .dash-card .value.green { color: #00ff88; }
+        .dash-card .value.red { color: #ff4444; }
+        
+        /* Botones */
+        .controls { display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; touch-action: manipulation; }
+        .btn-start { background: #00ff88; color: #000; }
+        .btn-stop { background: #ff4444; color: #fff; }
+        .btn:disabled { opacity: 0.5; }
+        
+        .status-bar { display: flex; justify-content: space-around; background: #12121a; padding: 12px; border-radius: 10px; margin-bottom: 15px; }
+        .stat { text-align: center; }
+        .stat-label { font-size: 0.6rem; color: #666; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; color: #00ff88; }
+        
+        /* Columnas - 1 en mobile */
+        .columns { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .column { background: #12121a; border-radius: 12px; overflow: hidden; }
+        .col-header { background: #1a1a25; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .col-header h3 { font-size: 0.9rem; color: #fff; }
+        .badge-count { background: #333; color: #fff; padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; }
+        
+        /* Tokens */
+        .token-list { max-height: 300px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .token-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #1a1a25; gap: 10px; flex-wrap: wrap; }
+        .token-img { width: 36px; height: 36px; border-radius: 50%; background: #252535; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .token-img img { width: 100%; height: 100%; object-fit: cover; }
+        .token-info { flex: 1; min-width: 100px; }
+        .token-name { color: #fff; font-weight: bold; font-size: 0.85rem; }
+        .token-fullname { font-size: 0.6rem; color: #888; }
+        .token-address { font-size: 0.5rem; color: #555; font-family: monospace; margin-top: 2px; cursor: pointer; }
+        .token-address:active { color: #00ff88; }
+        
+        .token-metrics { display: flex; gap: 15px; }
+        .metric { font-size: 0.65rem; text-align: right; }
+        .metric-label { color: #555; font-size: 0.5rem; }
+        .metric-value { color: #fff; font-weight: bold; font-size: 0.7rem; }
+        .metric-value.green { color: #00ff88; }
+        .metric-value.red { color: #ff4444; }
+        
+        .change-badge { font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; min-width: 55px; text-align: center; }
+        .change-badge.positive { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .change-badge.negative { background: rgba(255,68,68,0.2); color: #ff4444; }
+        
+        .log-section { margin-top: 15px; background: #12121a; border-radius: 12px; padding: 12px; }
+        .log-section h4 { color: #666; font-size: 0.75rem; margin-bottom: 8px; }
+        .log-list { max-height: 80px; overflow-y: auto; font-size: 0.6rem; color: #666; }
+        .log-entry { padding: 2px 0; }
+        .log-entry.success { color: #00ff88; }
+        
+        /* Simulador */
+        .simulator-section { margin-top: 15px; background: #12121a; border-radius: 12px; padding: 15px; }
+        .sim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+        .sim-header h3 { color: #00ff88; font-size: 1rem; }
+        .sell-btn { background: #ff4444; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        
+        .sim-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+        .sim-stat { background: #0a0a0f; padding: 10px; border-radius: 6px; text-align: center; }
+        .sim-stat-label { color: #666; font-size: 0.6rem; }
+        .sim-stat-value { color: #fff; font-size: 1rem; font-weight: bold; }
+        .sim-stat-value.green { color: #00ff88; }
+        
+        .sim-columns { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        
+        /* Registro */
+        #scanHistory { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        #scanHistory > div { background: #0a0a0f; padding: 8px; border-radius: 6px; text-align: center; }
+        
+        /* Desktop */
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            .dashboard { grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px; }
+            .dash-card { padding: 15px; }
+            .dash-card .value { font-size: 1.4rem; }
+            .dash-card h4 { font-size: 0.65rem; }
+            .columns { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+            .sim-stats { grid-template-columns: repeat(4, 1fr); }
+            .sim-columns { grid-template-columns: 1fr 1fr; }
+            #scanHistory { grid-template-columns: repeat(5, 1fr); }
+            .token-metrics { flex-direction: column; }
+        }
+        
+        @media (min-width: 1024px) {
+            #scanHistory { grid-template-columns: repeat(10, 1fr); }
+        }
+    </style>
+</head>
+        .log-section { margin-top: 20px; background: #12121a; border-radius: 12px; padding: 15px; }
+        .log-section h4 { color: #666; font-size: 0.8rem; margin-bottom: 10px; }
+        .log-list { max-height: 100px; overflow-y: auto; font-size: 0.65rem; color: #666; }
+        .log-entry { padding: 2px 0; }
+        .log-entry.success { color: #00ff88; }
+        .simulator-section { margin-top: 20px; background: #12121a; border-radius: 12px; padding: 20px; }
+        .sim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .sim-header h3 { color: #00ff88; }
+        .sell-btn { background: #ff4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .sim-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 15px; margin-bottom: 20px; }
+        .sim-stat { background: #0a0a0f; padding: 15px; border-radius: 8px; text-align: center; }
+        .sim-stat-label { color: #666; font-size: 0.7rem; }
+        .sim-stat-value { color: #fff; font-size: 1.3rem; font-weight: bold; }
+        .sim-stat-value.green { color: #00ff88; }
+        .sim-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .sim-list-header { background: #1a1a25; padding: 10px 15px; border-bottom: 1px solid #252535; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TOKEN PROFILE SCANNER</h1>
+        <p class="subtitle">Tokens que pagan Token Profile - Ultimos 20 minutos</p>
+
+        <div class="dashboard">
+            <div class="dash-card"><h4>Total</h4><div class="value" id="totalTokens">0</div></div>
+            <div class="dash-card"><h4>Promedio %</h4><div class="value" id="avgPercent">0%</div></div>
+            <div class="dash-card"><h4>2X+</h4><div class="value green" id="twoXCount">0</div></div>
+            <div class="dash-card"><h4>50%+ perdida</h4><div class="value red" id="loss50Count">0</div></div>
+            <div class="dash-card"><h4>% 2X</h4><div class="value green" id="twoXPercent">0%</div></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn" onclick="startScanner()">INICIAR ESCANEO</button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopScanner()" disabled>DETENER</button>
+            <button class="btn" style="background:#ffaa00;color:#000;" onclick="resetTokens()">NUEVO SCAN</button>
+        </div>
+        
+        <!-- SECCIÓN DE AYUDA -->
+        <div style="background:#12121a;border-radius:10px;padding:12px;margin-bottom:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleHelp()">
+                <h4 style="color:#888;font-size:0.8rem;">❓ CÓMO FUNCIONA</h4>
+                <span id="helpArrow" style="color:#666;font-size:1rem;">▼</span>
+            </div>
+            <div id="helpContent" style="display:none;margin-top:12px;border-top:1px solid #252535;padding-top:12px;">
+                <div style="margin-bottom:12px;">
+                    <div style="color:#00ff88;font-size:0.75rem;font-weight:bold;margin-bottom:4px;">🔴 VENTA EN PÉRDIDA</div>
+                    <div style="color:#666;font-size:0.65rem;">Cuando el token baje X% desde tu entrada, se vende automáticamente. Ej: 50% = pierdes $2.50 de cada $5.</div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="color:#00ff88;font-size:0.75rem;font-weight:bold;margin-bottom:4px;">🟢 VENTA EN GANANCIA</div>
+                    <div style="color:#666;font-size:0.65rem;">Cuando el token suba X%, se vende automáticamente. Ej: 100% = duplicas tu dinero ($5 → $10).</div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="color:#ffaa00;font-size:0.75rem;font-weight:bold;margin-bottom:4px;">📈 TRAILING STOP</div>
+                    <div style="color:#666;font-size:0.65rem;">Una vez activado, el stop sigue al precio siempre 30% por debajo. Ej: Token sube a +50%, stop = +20%. Si baja a +20%, se vende.</div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="color:#00d4ff;font-size:0.75rem;font-weight:bold;margin-bottom:4px;">💰 RESUMEN DE VENTAS</div>
+                    <div style="color:#666;font-size:0.65rem;">Acumula todo lo que ganaste y perdiste. Resultado Neto = Ganancias - Pérdidas.</div>
+                </div>
+                <div>
+                    <div style="color:#888;font-size:0.75rem;font-weight:bold;margin-bottom:4px;">🌐 REDES</div>
+                    <div style="color:#666;font-size:0.65rem;">Selecciona qué blockchains escanear. Por defecto: Solana, Ethereum, BSC.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SELECCIÓN DE REDES -->
+        <div style="background:#12121a;border-radius:10px;padding:12px;margin-bottom:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <h4 style="color:#888;font-size:0.8rem;">🌐 REDES A ESCANEAR</h4>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="selectAllChains()" style="background:#1a1a25;color:#666;border:none;padding:4px 8px;border-radius:4px;font-size:0.65rem;cursor:pointer;">Todas</button>
+                    <button onclick="deselectAllChains()" style="background:#1a1a25;color:#666;border:none;padding:4px 8px;border-radius:4px;font-size:0.65rem;cursor:pointer;">Ninguna</button>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;" id="chainSelector">
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="solana" checked style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#9945FF"/><circle cx="12" cy="12" r="6" fill="#14F195"/></svg>
+                    <span style="color:#00ff88;font-weight:bold;">SOL</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="ethereum" checked style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#627EEA"/><path fill="#fff" d="M12 6l-4.5 4.5h3v5.5l4.5 2.5v-5.5h3z"/></svg>
+                    <span style="color:#627eea;font-weight:bold;">ETH</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="bsc" checked style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#F3BA2F"/><path fill="#000" d="M12 6l-2 4h4l-2-4zm0 8l2-4h-4l2 4z"/></svg>
+                    <span style="color:#f3ba2f;font-weight:bold;">BSC</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="avalanche" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#E84142"/><path fill="#fff" d="M12 6l6 6-6 6-6-6 6-6z"/></svg>
+                    <span style="color:#e84142;font-weight:bold;">AVAX</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="polygon" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#8247E5"/><path fill="#fff" d="M12 6l6 3v6l-6 3-6-3V9l6-3z"/></svg>
+                    <span style="color:#8247e5;font-weight:bold;">MATIC</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="arbitrum" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#28A0F0"/><circle cx="12" cy="12" r="4" fill="#fff"/></svg>
+                    <span style="color:#28a0f0;font-weight:bold;">ARB</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="base" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#0052FF"/><path fill="#fff" d="M8 12l4-4v8l-4-4zm8 0l4-4v8l-4-4z"/></svg>
+                    <span style="color:#0052ff;font-weight:bold;">BASE</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="optimism" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#FF0420"/><path fill="#fff" d="M12 8l-4 4h3v4h2v-4h3l-4-4z"/></svg>
+                    <span style="color:#ff0420;font-weight:bold;">OP</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="tron" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#FF0013"/><path fill="#fff" d="M12 6l-4 4h3v4h2v-4h3l-4-4z"/></svg>
+                    <span style="color:#ff0013;font-weight:bold;">TRX</span>
+                </label>
+                <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px;background:#0a0a0f;border-radius:6px;font-size:0.7rem;transition:all 0.2s;">
+                    <input type="checkbox" value="sonic" style="display:none;"> 
+                    <svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#0FCCCE"/><circle cx="12" cy="12" r="5" fill="#000"/></svg>
+                    <span style="color:#0fccce;font-weight:bold;">SONIC</span>
+                </label>
+            </div>
+            <style>
+                #chainSelector label:hover { background:#1a1a25 !important; transform:scale(1.05); }
+                #chainSelector label input:checked + svg { filter:drop-shadow(0 0 4px currentColor); }
+                #chainSelector label input:checked + svg + span { text-shadow:0 0 8px currentColor; }
+            </style>
+        </div>
+
+        <div class="status-bar">
+            <div class="stat"><div class="stat-label">Escaneos</div><div class="stat-value" id="scanCount">0</div></div>
+            <div class="stat"><div class="stat-label">Ultimo</div><div class="stat-value" id="lastScan">--</div></div>
+        </div>
+
+        <div class="columns">
+            <div class="column">
+                <div class="col-header"><h3>TODOS</h3><span class="badge-count" id="allCount">0</span></div>
+                <div class="token-list" id="allList"></div>
+            </div>
+            <div class="column">
+                <div class="col-header"><h3>2X+</h3><span class="badge-count" id="winnersCount">0</span></div>
+                <div class="token-list" id="winnersList"></div>
+            </div>
+            <div class="column">
+                <div class="col-header"><h3>50%+ PERDIDA</h3><span class="badge-count" id="lossCount">0</span></div>
+                <div class="token-list" id="lossList"></div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <h4>LOG</h4>
+            <div class="log-list" id="logList"></div>
+        </div>
+
+        <div class="simulator-section">
+            <div class="sim-header">
+                <h3>SIMULADOR ($5 por token)</h3>
+                <button class="sell-btn" onclick="sellAllPositions()">VENDER TODO</button>
+            </div>
+            <div class="sim-stats">
+                <div class="sim-stat"><div class="sim-stat-label">INVERTIDO</div><div class="sim-stat-value" id="simInvested">$0</div></div>
+                <div class="sim-stat"><div class="sim-stat-label">VALOR</div><div class="sim-stat-value" id="simValue">$0</div></div>
+                <div class="sim-stat"><div class="sim-stat-label">GANANCIA</div><div class="sim-stat-value green" id="simPnL">$0</div></div>
+                <div class="sim-stat"><div class="sim-stat-label">% PROM</div><div class="sim-stat-value green" id="simAvg">0%</div></div>
+            </div>
+            <div class="sim-columns">
+                <div class="column">
+                    <div class="sim-list-header"><h3>POSICIONES ABIERTAS</h3></div>
+                    <div class="token-list" id="openList"></div>
+                </div>
+                <div class="column">
+                    <div class="sim-list-header"><h3>HISTORIAL CERRADO</h3></div>
+                    <div class="token-list" id="closedList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALISIS DE ESCENARIOS -->
+        <div class="simulator-section" style="margin-top:20px;background:#1a1a25;border:2px solid #ffaa00;">
+            <div class="sim-header">
+                <h3 style="color:#ffaa00;">📊 SIMULADOR DE INVERSIÓN ($5000)</h3>
+                <div style="color:#888;font-size:0.75rem;">$5 por token | Tokens abiertos: <span id="simTokenCount">0</span></div>
+            </div>
+            
+            <!-- PANEL PÉRDIDA -->
+            <div style="background:#0a0a0f;border-radius:10px;padding:15px;margin-bottom:15px;border-left:4px solid #ff4444;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="color:#ff4444;font-size:0.9rem;">🔴 VENTA EN PÉRDIDA</h4>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <label style="color:#666;font-size:0.75rem;">%:</label>
+                        <input type="number" id="lossPercent" value="50" style="width:60px;padding:6px;border-radius:4px;border:none;background:#1a1a25;color:#ff4444;font-weight:bold;text-align:center;" onchange="analyzeScenarios()">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">INVERTIDO</div>
+                        <div style="color:#fff;font-weight:bold;" id="lossInvested">$0</div>
+                    </div>
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">RECUPERAS</div>
+                        <div style="color:#ff4444;font-weight:bold;" id="lossRecovered">$0</div>
+                    </div>
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">PIERDES</div>
+                        <div style="color:#ff4444;font-weight:bold;font-size:1.1rem;" id="lossAmount">$0</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;padding:10px;background:#ff444415;border-radius:6px;text-align:center;">
+                    <span style="color:#888;font-size:0.7rem;">QUEDA EN WALLET: </span>
+                    <span style="color:#ff4444;font-weight:bold;font-size:1rem;" id="lossRemaining">$5000</span>
+                </div>
+            </div>
+            
+            <!-- PANEL GANANCIA -->
+            <div style="background:#0a0a0f;border-radius:10px;padding:15px;margin-bottom:15px;border-left:4px solid #00ff88;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+                    <h4 style="color:#00ff88;font-size:0.9rem;">🟢 VENTA EN GANANCIA</h4>
+                    <div style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            <label style="color:#666;font-size:0.7rem;">Ganancia:</label>
+                            <input type="number" id="gainPercent" value="100" style="width:55px;padding:6px;border-radius:4px;border:none;background:#1a1a25;color:#00ff88;font-weight:bold;text-align:center;font-size:0.8rem;" onchange="analyzeScenarios()">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:5px;background:#1a1a25;padding:5px 10px;border-radius:4px;">
+                            <input type="checkbox" id="trailingStopEnabled" onchange="analyzeScenarios()" style="width:15px;height:15px;">
+                            <label style="color:#ffaa00;font-size:0.7rem;">Trail:</label>
+                            <input type="number" id="trailingPercent" value="50" style="width:45px;padding:4px;border-radius:3px;border:none;background:#0a0a0f;color:#ffaa00;font-weight:bold;text-align:center;font-size:0.75rem;" onchange="analyzeScenarios()">
+                            <span style="color:#666;font-size:0.6rem;">(-30%)</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">INVERTIDO</div>
+                        <div style="color:#fff;font-weight:bold;" id="gainInvested">$0</div>
+                    </div>
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">RECUPERAS</div>
+                        <div style="color:#00ff88;font-weight:bold;" id="gainRecovered">$0</div>
+                    </div>
+                    <div style="text-align:center;padding:10px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">GANAS</div>
+                        <div style="color:#00ff88;font-weight:bold;font-size:1.1rem;" id="gainAmount">$0</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;padding:10px;background:#00ff8815;border-radius:6px;text-align:center;">
+                    <span style="color:#888;font-size:0.7rem;">QUEDA EN WALLET: </span>
+                    <span style="color:#00ff88;font-weight:bold;font-size:1rem;" id="gainRemaining">$5000</span>
+                </div>
+                <!-- Info Trailing -->
+                <div id="trailingInfo" style="margin-top:10px;padding:8px;background:#1a1a25;border-radius:6px;font-size:0.65rem;color:#666;text-align:center;"></div>
+            </div>
+            
+            <!-- Detalle por token -->
+            <div style="background:#0a0a0f;border-radius:8px;padding:12px;">
+                <h4 style="color:#ffaa00;font-size:0.85rem;margin-bottom:10px;">📋 DETALLE POR TOKEN ($5 c/u)</h4>
+                <div id="scenarioDetail" style="max-height:150px;overflow-y:auto;">
+                    <div style="color:#666;text-align:center;padding:20px;">Sin posiciones abiertas</div>
+                </div>
+            </div>
+            
+            <!-- RESUMEN DE VENTAS REALES -->
+            <div style="background:#0a0a0f;border-radius:8px;padding:15px;margin-top:15px;border-left:4px solid #00d4ff;">
+                <h4 style="color:#00d4ff;font-size:0.9rem;margin-bottom:12px;">💰 RESUMEN DE VENTAS REALES</h4>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+                    <div style="text-align:center;padding:12px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">VENTAS EN PÉRDIDA</div>
+                        <div style="color:#ff4444;font-weight:bold;font-size:1rem;" id="totalLossSales">$0</div>
+                        <div style="color:#555;font-size:0.6rem;" id="countLossSales">0 ventas</div>
+                    </div>
+                    <div style="text-align:center;padding:12px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">VENTAS EN GANANCIA</div>
+                        <div style="color:#00ff88;font-weight:bold;font-size:1rem;" id="totalGainSales">$0</div>
+                        <div style="color:#555;font-size:0.6rem;" id="countGainSales">0 ventas</div>
+                    </div>
+                    <div style="text-align:center;padding:12px;background:#12121a;border-radius:6px;">
+                        <div style="color:#666;font-size:0.65rem;">RESULTADO NETO</div>
+                        <div style="color:#fff;font-weight:bold;font-size:1.1rem;" id="netResult">$0</div>
+                        <div style="color:#555;font-size:0.6rem;" id="totalSalesCount">0 ventas total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGISTRO DE SCANEOS -->
+        <div class="simulator-section" style="margin-top:20px;">
+            <div class="sim-header">
+                <h3>REGISTRO DE SCANEOS</h3>
+                <button class="sell-btn" style="background:#252535;" onclick="clearHistory()">LIMPIAR</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:10px;" id="scanHistory"></div>
+        </div>
+    </div>
+
+    <script>
+        let scannerActive = false, scanInterval = null, tokens = [], scanCount = 0;
+        let tradeAmount = 5, openPositions = [], closedPositions = [];
+        let scanHistory = [];
+        const emojis = ['🧠','🇺🇸','🎯','👑','🌑','🐦','💎','🦎','🐒','🏎️','📐','🏠','🤿','😱','🪙','🤡','🛢️','🔮','👻','💀'];
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('tokenProfileScanner');
+                if (saved) { tokens = JSON.parse(saved).tokens || []; updateAllViews(); }
+                const savedSim = localStorage.getItem('simPositions');
+                if (savedSim) { const d = JSON.parse(savedSim); openPositions = d.open || []; closedPositions = d.closed || []; updateSimulator(); }
+                const savedHistory = localStorage.getItem('scanHistory');
+                if (savedHistory) { scanHistory = JSON.parse(savedHistory); renderHistory(); }
+            } catch(e) {}
+        }
+        function saveState() { try { localStorage.setItem('tokenProfileScanner', JSON.stringify({tokens})); } catch(e) {} }
+        function saveSimState() { try { localStorage.setItem('simPositions', JSON.stringify({open:openPositions, closed:closedPositions})); } catch(e) {} }
+        function addLog(msg, type) {
+            try { const list = document.getElementById('logList'); const entry = document.createElement('div'); entry.className = 'log-entry '+(type||''); entry.textContent = '['+new Date().toLocaleTimeString()+'] '+msg; list.insertBefore(entry, list.firstChild); while(list.children.length>30) list.lastChild.remove(); } catch(e) {}
+        }
+        function formatNumber(n) { if(!n)return'0'; if(n>=1e9)return(n/1e9).toFixed(2)+'B'; if(n>=1e6)return(n/1e6).toFixed(2)+'M'; if(n>=1e3)return(n/1e3).toFixed(1)+'K'; return n.toFixed(0); }
+        function calcChange(e,c) { if(!e||!c||e===0)return 0; return ((c-e)/e)*100; }
+        
+        function copyAddress(addr) {
+            navigator.clipboard.writeText(addr).then(() => {
+                addLog('Copiado: ' + addr.slice(0,16) + '...', 'success');
+            });
+        }
+        
+        // Obtener redes seleccionadas
+        function getSelectedChains(){
+            const checkboxes = document.querySelectorAll('#chainSelector input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+        
+        // Seleccionar todas las redes
+        function selectAllChains(){
+            document.querySelectorAll('#chainSelector input[type="checkbox"]').forEach(cb => cb.checked = true);
+            addLog('Redes: Todas seleccionadas', '');
+        }
+        
+        // Deseleccionar todas
+        function deselectAllChains(){
+            document.querySelectorAll('#chainSelector input[type="checkbox"]').forEach(cb => cb.checked = false);
+            addLog('Redes: Ninguna seleccionada', '');
+        }
+        
+        // Mostrar/ocultar ayuda
+        function toggleHelp(){
+            const content = document.getElementById('helpContent');
+            const arrow = document.getElementById('helpArrow');
+            if(content.style.display === 'none'){
+                content.style.display = 'block';
+                arrow.textContent = '▲';
+            }else{
+                content.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+
+        async function getTokenInfo(cid, addr) {
+            try { const r = await fetch('https://api.dexscreener.com/token-pairs/v1/'+cid+'/'+addr); const d = await r.json(); if(d&&d.length>0){ const p=d[0]; return {mcap:p.marketCap||p.fdv, pairCreatedAt:p.pairCreatedAt}; } } catch(e){}
+            return null;
+        }
+        async function scan() {
+            scanCount++;
+            const selectedChains = getSelectedChains();
+            try { document.getElementById('lastScan').textContent = new Date().toLocaleTimeString(); } catch(e){}
+            try { document.getElementById('scanCount').textContent = scanCount; } catch(e){}
+            try {
+                const r = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
+                const profiles = await r.json();
+                if(profiles&&profiles.length>0){
+                    let newCount=0;
+                    for(const p of profiles){
+                        // FILTRAR POR RED - solo procesar si la red está seleccionada
+                        if(!selectedChains.includes(p.chainId)){
+                            continue;
+                        }
+                        
+                        const addr = p.tokenAddress;
+                        const existingToken = tokens.find(t=>t.address===addr);
+                        
+                        // Siempre obtener info actualizada del token
+                        const ti = await getTokenInfo(p.chainId, addr);
+                        const currentMcap = ti?.mcap || 0;
+                        
+                        if(existingToken){
+                            // Actualizar MCAP de token existente
+                            existingToken.currentMcap = currentMcap;
+                            existingToken.lastUpdate = Date.now();
+                        }
+                        
+                        // Actualizar en posiciones abiertas SIEMPRE
+                        const openPos = openPositions.find(pos => pos.address === addr);
+                        if(openPos){
+                            openPos.currentMcap = currentMcap;
+                            console.log('Actualizado:', openPos.symbol, 'from', openPos.entryMcap, 'to', currentMcap);
+                        }
+                        
+                        if(!existingToken){
+                            // Token nuevo - solo agregar si tiene menos de 20 min
+                            const now=Date.now(), created=ti?.pairCreatedAt||now, age=(now-created)/60000;
+                            if(age<=20){
+                                const token = {address:addr, name:p.name||'Unknown', symbol:p.symbol||'?', chainId:p.chainId, image:p.icon, entryMcap:currentMcap, currentMcap:currentMcap, entryTime:now, lastUpdate:now, reached2X:false};
+                                tokens.unshift(token); newCount++; saveState(); addSimPosition(token); addLog('NUEVO: '+token.symbol+' $'+formatNumber(token.entryMcap),'success');
+                            }
+                        }
+                    }
+                    
+                    // Marcar tokens que llegaron a 2X
+                    tokens.forEach(t => {
+                        const change = calcChange(t.entryMcap, t.currentMcap);
+                        if(change >= 100 && !t.reached2X){
+                            t.reached2X = true;
+                            addLog('🚀 2X: '+t.symbol, 'success');
+                        }
+                    });
+                    
+                    saveState();
+                    updateAllViews(); updateSimulator(); 
+                    // Ejecutar venta automática
+                    const lossP = parseFloat(document.getElementById('lossPercent')?.value) || 50;
+                    const gainP = parseFloat(document.getElementById('gainPercent')?.value) || 100;
+                    checkAutoSell(lossP, gainP);
+                    analyzeScenarios(); 
+                    addLog('Escaneo #'+scanCount+' - Tokens: '+tokens.length);
+                }
+            } catch(e){ addLog('Error: '+e.message,'error'); }
+        }
+        function updateAllViews() {
+            try {
+                const total = tokens.length;
+                let totalP=0; tokens.forEach(t=>{totalP+=calcChange(t.entryMcap,t.currentMcap);});
+                const avgP = total>0?(totalP/total).toFixed(1):0;
+                const twoX = tokens.filter(t=>t.reached2X || calcChange(t.entryMcap,t.currentMcap)>=100);
+                const loss50 = tokens.filter(t=>calcChange(t.entryMcap,t.currentMcap)<=-50);
+                const setText=(id,v)=>{try{document.getElementById(id).textContent=v;}catch(e){}};
+                setText('totalTokens',total);
+                const avgEl=document.getElementById('avgPercent');if(avgEl){avgEl.textContent=(avgP>=0?'+':'')+avgP+'%';avgEl.className='value '+(avgP>=0?'green':'red');}
+                setText('twoXCount',twoX.length);setText('loss50Count',loss50.length);setText('twoXPercent',total>0?((twoX.length/total)*100).toFixed(1)+'%':'0%');
+                renderAllList();renderWinnersList(twoX);renderLossList(loss50);
+                setText('allCount',total);setText('winnersCount',twoX.length);setText('lossCount',loss50.length);
+            } catch(e){}
+        }
+        function renderAllList() {
+            try {
+                const list = document.getElementById('allList'); if(!list)return;
+                if(tokens.length===0){list.innerHTML='<div style="padding:30px;color:#666;">Sin tokens</div>';return;}
+                list.innerHTML=tokens.map((t,i)=>{const ch=calcChange(t.entryMcap,t.currentMcap);const cls=ch>=100?'positive':(ch<=-99?'negative':(ch>=0?'green':'red'));return '<div class="token-item"><div class="token-img">'+(t.image?'<img src="'+t.image+'">':emojis[i%emojis.length])+'</div><div class="token-info"><div class="token-name">'+t.symbol+'</div><div class="token-fullname">'+t.name+'</div><div class="token-address" onclick="copyAddress(\''+t.address+'\')">'+t.address.slice(0,14)+'...</div></div><div class="token-metrics"><div class="metric"><div class="metric-label">ENTRY</div><div class="metric-value">$'+formatNumber(t.entryMcap)+'</div></div><div class="metric"><div class="metric-label">NOW</div><div class="metric-value">$'+formatNumber(t.currentMcap)+'</div></div></div><div class="change-badge '+cls+'">'+(ch>=0?'+':'')+ch.toFixed(1)+'%</div></div>';}).join('');
+            }catch(e){}
+        }
+        function renderWinnersList(w) {
+            try {
+                const list = document.getElementById('winnersList'); if(!list)return;
+                if(w.length===0){list.innerHTML='<div style="padding:30px;color:#666;">Sin 2X</div>';return;}
+                w.sort((a,b)=>calcChange(b.entryMcap,b.currentMcap)-calcChange(a.entryMcap,a.currentMcap));
+                list.innerHTML=w.map((t,i)=>{const ch=calcChange(t.entryMcap,t.currentMcap);const idx=tokens.findIndex(x=>x.address===t.address);return '<div class="token-item"><div class="token-img">'+(t.image?'<img src="'+t.image+'">':emojis[idx%emojis.length])+'</div><div class="token-info"><div class="token-name">'+t.symbol+'</div><div class="token-fullname">'+t.name+'</div><div class="token-address" onclick="copyAddress(\''+t.address+'\')">'+t.address.slice(0,14)+'...</div></div><div class="token-metrics"><div class="metric"><div class="metric-label">ENTRY</div><div class="metric-value">$'+formatNumber(t.entryMcap)+'</div></div><div class="metric"><div class="metric-label">NOW</div><div class="metric-value green">$'+formatNumber(t.currentMcap)+'</div></div></div><div class="change-badge positive">+'+ch.toFixed(0)+'%</div></div>';}).join('');
+            }catch(e){}
+        }
+        function renderLossList(l) {
+            try {
+                const list = document.getElementById('lossList'); if(!list)return;
+                if(l.length===0){list.innerHTML='<div style="padding:30px;color:#666;">Sin perdidas</div>';return;}
+                l.sort((a,b)=>calcChange(a.entryMcap,a.currentMcap)-calcChange(b.entryMcap,b.currentMcap));
+                list.innerHTML=l.map((t,i)=>{const ch=calcChange(t.entryMcap,t.currentMcap);const idx=tokens.findIndex(x=>x.address===t.address);return '<div class="token-item"><div class="token-img">'+(t.image?'<img src="'+t.image+'">':emojis[idx%emojis.length])+'</div><div class="token-info"><div class="token-name">'+t.symbol+'</div><div class="token-fullname">'+t.name+'</div><div class="token-address" onclick="copyAddress(\''+t.address+'\')">'+t.address.slice(0,14)+'...</div></div><div class="token-metrics"><div class="metric"><div class="metric-label">ENTRY</div><div class="metric-value">$'+formatNumber(t.entryMcap)+'</div></div><div class="metric"><div class="metric-label">NOW</div><div class="metric-value red">$'+formatNumber(t.currentMcap)+'</div></div></div><div class="change-badge negative">'+ch.toFixed(0)+'%</div></div>';}).join('');
+            }catch(e){}
+        }
+        function startScanner() { scannerActive=true; document.getElementById('startBtn').disabled=true; document.getElementById('stopBtn').disabled=false; tokens=[]; scanCount=0; addLog('Scanner iniciado','success'); scan(); scanInterval=setInterval(scan,5000); }
+        function stopScanner() { scannerActive=false; clearInterval(scanInterval); document.getElementById('startBtn').disabled=false; document.getElementById('stopBtn').disabled=true; addLog('Scanner detenido','warning'); }
+        function resetTokens() { tokens=[]; scanCount=0; openPositions=[]; closedPositions=[]; localStorage.removeItem('tokenProfileScanner'); localStorage.removeItem('simPositions'); updateAllViews(); updateSimulator(); addLog('Nuevo scan',''); }
+        
+        function addSimPosition(t) {
+            openPositions.push({address:t.address,symbol:t.symbol,name:t.name,image:t.image,entryMcap:t.entryMcap,currentMcap:t.currentMcap,invested:tradeAmount});
+            saveSimState();
+            updateSimulator();
+        }
+        function updateSimulator() {
+            try{
+                const invested = openPositions.length*tradeAmount;
+                let currentValue=0,totalPct=0;
+                openPositions.forEach(p=>{const ch=calcChange(p.entryMcap,p.currentMcap);totalPct+=ch;currentValue+=p.invested*(1+ch/100);});
+                const avgP=openPositions.length>0?(totalPct/openPositions.length):0;
+                const pnl = currentValue-invested;
+                const setT=(id,v)=>{try{document.getElementById(id).textContent=v;}catch(e){}};setT('simInvested','$'+invested);setT('simValue','$'+currentValue.toFixed(2));const pnlEl=document.getElementById('simPnL');pnlEl.textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);pnlEl.style.color=pnl>=0?'#00ff88':'#ff4444';
+                const avgEl=document.getElementById('simAvg');avgEl.textContent=(avgP>=0?'+':'')+avgP.toFixed(1)+'%';avgEl.style.color=avgP>=0?'#00ff88':'#ff4444';
+                renderOpenPositions();renderClosedPositions();analyzeScenarios();updateSalesSummary();updateTrailingInfo();
+            }catch(e){}
+        }
+        function renderOpenPositions() {
+            try{
+                const list = document.getElementById('openList'); if(!list)return;
+                if(openPositions.length===0){list.innerHTML='<div style="padding:20px;color:#666;">Sin posiciones</div>';return;}
+                list.innerHTML=openPositions.map((p,i)=>{const ch=calcChange(p.entryMcap,p.currentMcap);return '<div class="token-item"><div class="token-img">'+(p.image?'<img src="'+p.image+'">':emojis[i%emojis.length])+'</div><div class="token-info"><div class="token-name">'+p.symbol+'</div><div class="token-fullname">$'+p.invested+' entrada</div><div class="token-address" onclick="copyAddress(\''+p.address+'\')">'+p.address.slice(0,14)+'...</div></div><div class="token-metrics"><div class="metric"><div class="metric-label">ENTRY</div><div class="metric-value">$'+formatNumber(p.entryMcap)+'</div></div><div class="metric"><div class="metric-label">NOW</div><div class="metric-value">$'+formatNumber(p.currentMcap)+'</div></div></div><div class="change-badge '+(ch>=0?'positive':'negative')+'">'+(ch>=0?'+':'')+ch.toFixed(1)+'%</div></div>';}).join('');
+            }catch(e){}
+        }
+        function renderClosedPositions() {
+            try{
+                const list = document.getElementById('closedList'); if(!list)return;
+                if(closedPositions.length===0){list.innerHTML='<div style="padding:20px;color:#666;">Sin cerradas</div>';return;}
+                const s=[...closedPositions].reverse();
+                list.innerHTML=s.map(p=>'<div class="token-item"><div class="token-img">'+(p.image?'<img src="'+p.image+'">':'💰')+'</div><div class="token-info"><div class="token-name">'+p.symbol+'</div><div class="token-fullname">$'+p.invested+' -> '+(p.currentValue||0).toFixed(2)+'</div></div><div class="change-badge '+(p.entryPercent>=0?'positive':'negative')+'">'+(p.entryPercent>=0?'+':'')+p.entryPercent.toFixed(1)+'%</div></div>').join('');
+            }catch(e){}
+        }
+        function sellAllPositions() {
+            if(openPositions.length===0){alert('No hay posiciones!');return;}
+            if(!confirm('Cerrar '+openPositions.length+' posiciones?'))return;
+            
+            // Calcular stats
+            const invested = openPositions.length * tradeAmount;
+            let currentValue=0;
+            openPositions.forEach(p=>{const ch=calcChange(p.entryMcap,p.currentMcap);currentValue+=p.invested*(1+ch/100);});
+            const pnl = currentValue - invested;
+            const pnlPercent = invested > 0 ? ((pnl / invested) * 100) : 0;
+            
+            // Guardar en historial
+            const scanNum = scanHistory.length + 1;
+            scanHistory.push({
+                name: 'Scan ' + scanNum,
+                invested: invested,
+                currentValue: currentValue,
+                pnl: pnl,
+                pnlPercent: pnlPercent,
+                tokens: openPositions.length,
+                date: new Date().toLocaleString()
+            });
+            
+            // Mantener solo 10
+            if(scanHistory.length > 10) scanHistory = scanHistory.slice(-10);
+            
+            localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+            
+            // Cerrar posiciones
+            openPositions.forEach(p=>{p.entryPercent=calcChange(p.entryMcap,p.currentMcap);p.currentValue=p.invested*(1+p.entryPercent/100);closedPositions.push(p);});
+            openPositions=[]; saveSimState(); updateSimulator(); renderHistory(); addLog('Cerradas: '+scanHistory[scanHistory.length-1].name+' - Invertido: $'+invested+' Ganancia: '+(pnl>=0?'+':'')+'$'+pnl.toFixed(2),'success');
+        }
+        
+        function renderHistory() {
+            const container = document.getElementById('scanHistory');
+            if(!container) return;
+            
+            if(scanHistory.length === 0){
+                container.innerHTML = '<div style="grid-column:span 10;text-align:center;padding:20px;color:#666;">Sin registros</div>';
+                return;
+            }
+            
+            container.innerHTML = scanHistory.map((s, i) => {
+                const isPositive = s.pnl >= 0;
+                return '<div style="background:#0a0a0f;padding:10px;border-radius:6px;text-align:center;min-width:80px;"><div style="color:#fff;font-weight:bold;font-size:0.75rem;">'+s.name+'</div><div style="color:#888;font-size:0.6rem;">$'+s.invested+' inv</div><div style="color:'+(isPositive?'#00ff88':'#ff4444')+';font-weight:bold;font-size:0.85rem;">'+(isPositive?'+':'')+'$'+s.pnl.toFixed(2)+'</div><div style="color:'+(isPositive?'#00ff88':'#ff4444')+';font-size:0.7rem;">'+(isPositive?'+':'')+s.pnlPercent.toFixed(1)+'%</div></div>';
+            }).join('');
+        }
+        
+        function clearHistory() {
+            if(confirm('Limpiar historial?')){
+                scanHistory = [];
+                localStorage.removeItem('scanHistory');
+                renderHistory();
+            }
+        }
+        // VENTA AUTOMÁTICA cuando alcanza el %
+        function checkAutoSell(lossThreshold, gainThreshold) {
+            const tokensToSell = [];
+            const trailingEnabled = document.getElementById('trailingStopEnabled')?.checked || false;
+            const trailTrigger = parseFloat(document.getElementById('trailingPercent')?.value) || 50;
+            const TRAIL_DIFF = 30; // Siempre 30% de diferencia
+            
+            openPositions.forEach((p, index) => {
+                const currentChange = calcChange(p.entryMcap, p.currentMcap);
+                
+                // Calcular nivel de stop RELATIVO: precio actual - 30%
+                // Si está en +1000%, el stop será +970%
+                const trailingStopLevel = currentChange - TRAIL_DIFF;
+                
+                // Guardar el nivel de trailing en la posición
+                p.trailingStopLevel = trailingStopLevel;
+                p.trailTrigger = trailTrigger;
+                
+                // Venta en pérdida (ej: -50% o menos)
+                if(currentChange <= -lossThreshold){
+                    tokensToSell.push({index, reason: 'loss', percent: currentChange});
+                }
+                // Venta en ganancia normal (ej: +1000% o más)
+                else if(currentChange >= gainThreshold){
+                    tokensToSell.push({index, reason: 'gain', percent: currentChange});
+                }
+                // Venta por TRAILING STOP RELATIVO
+                // Si: está habilitado, llegó al trigger (ej: +1000%), y cayó 30% desde el precio actual
+                else if(trailingEnabled && currentChange >= trailTrigger && currentChange <= (trailTrigger + TRAIL_DIFF)){
+                    // El precio cayó 30% desde donde está ahora → se vende
+                    tokensToSell.push({index, reason: 'trailing', percent: currentChange});
+                }
+            });
+            
+            // Vender los tokens que alcanzaron el umbral
+            tokensToSell.forEach(t => {
+                const p = openPositions[t.index];
+                if(p){
+                    const sellPrice = p.invested * (1 + t.percent / 100);
+                    p.entryPercent = t.percent;
+                    p.currentValue = sellPrice;
+                    closedPositions.push(p);
+                    
+                    let reasonText = '';
+                    if(t.reason === 'loss') reasonText = '📉 PÉRDIDA';
+                    else if(t.reason === 'trailing') reasonText = '📊 TRAIL STOP';
+                    else reasonText = '🚀 GANANCIA';
+                    
+                    addLog('🎯 ' + reasonText + ' ' + (t.percent >= 0 ? '+' : '') + t.percent.toFixed(1) + '%: ' + p.symbol, 'success');
+                }
+            });
+            
+            // Eliminar del array de abiertos
+            if(tokensToSell.length > 0){
+                openPositions = openPositions.filter((p, i) => !tokensToSell.find(t => t.index === i));
+                saveSimState();
+                updateSimulator();
+                renderClosedPositions();
+                updateSalesSummary();
+            }
+            
+            // Actualizar info del trailing stop en UI
+            updateTrailingInfo();
+        }
+        
+        // Actualizar información del trailing stop
+        function updateTrailingInfo(){
+            const container = document.getElementById('trailingInfo');
+            if(!container) return;
+            
+            const enabled = document.getElementById('trailingStopEnabled')?.checked;
+            const trailTrigger = parseFloat(document.getElementById('trailingPercent')?.value) || 50;
+            const TRAIL_DIFF = 30;
+            
+            if(!enabled || openPositions.length === 0){
+                container.innerHTML = 'Trail: Desactivado';
+                container.style.color = '#555';
+                return;
+            }
+            
+            let html = '';
+            openPositions.forEach(p => {
+                const currentChange = calcChange(p.entryMcap, p.currentMcap);
+                // Stop relativo: precio actual - 30%
+                const stopLevel = currentChange - TRAIL_DIFF;
+                const inZone = currentChange >= trailTrigger && currentChange <= (trailTrigger + TRAIL_DIFF);
+                
+                const status = currentChange >= trailTrigger 
+                    ? (inZone ? '🔴 VENTA: +' + stopLevel.toFixed(0) + '%' : '🔄 Activo')
+                    : '⏳ Esperando +' + trailTrigger + '%';
+                
+                const statusColor = currentChange >= trailTrigger 
+                    ? (inZone ? '#ff4444' : '#ffaa00') 
+                    : '#666';
+                
+                html += '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #252535;">';
+                html += '<span style="color:#fff;">' + p.symbol + '</span>';
+                html += '<span>Ahora: +' + currentChange.toFixed(0) + '% | Stop: +' + stopLevel.toFixed(0) + '% | <span style="color:' + statusColor + ';">' + status + '</span></span>';
+                html += '</div>';
+            });
+            container.innerHTML = html;
+            container.style.color = '#888';
+        }
+        
+        // RESUMEN DE VENTAS REALES - del historial cerrado
+        function updateSalesSummary() {
+            let totalLoss = 0, totalGain = 0;
+            let countLoss = 0, countGain = 0;
+            
+            closedPositions.forEach(p => {
+                if(p.entryPercent < 0){
+                    // Pérdida
+                    totalLoss += Math.abs(p.invested * p.entryPercent / 100);
+                    countLoss++;
+                }else{
+                    // Ganancia
+                    totalGain += p.invested * p.entryPercent / 100;
+                    countGain++;
+                }
+            });
+            
+            const netResult = totalGain - totalLoss;
+            const totalSales = countLoss + countGain;
+            
+            document.getElementById('totalLossSales').textContent = '-$' + totalLoss.toFixed(2);
+            document.getElementById('countLossSales').textContent = countLoss + ' ventas';
+            document.getElementById('totalGainSales').textContent = '+$' + totalGain.toFixed(2);
+            document.getElementById('countGainSales').textContent = countGain + ' ventas';
+            document.getElementById('netResult').textContent = (netResult >= 0 ? '+$' : '-$') + Math.abs(netResult).toFixed(2);
+            document.getElementById('netResult').style.color = netResult >= 0 ? '#00ff88' : '#ff4444';
+            document.getElementById('totalSalesCount').textContent = totalSales + ' ventas total';
+        }
+        
+        // ANÁLISIS DE ESCENARIOS - Solo posiciones ABIERTAS (no vendidas)
+        const INITIAL_CAPITAL = 5000;
+        
+        function analyzeScenarios() {
+            // Obtener porcentajes de los inputs
+            const lossInputPercent = parseFloat(document.getElementById('lossPercent').value) || 50;
+            const gainInputPercent = parseFloat(document.getElementById('gainPercent').value) || 100;
+            
+            // Verificar venta automática
+            checkAutoSell(lossInputPercent, gainInputPercent);
+            
+            // SOLO tomar tokens que están en posiciones ABIERTAS (no vendidos)
+            const tokensAnalyzed = openPositions.length;
+            
+            document.getElementById('simTokenCount').textContent = tokensAnalyzed;
+            
+            if(tokensAnalyzed === 0){
+                // Panel PÉRDIDA
+                document.getElementById('lossInvested').textContent = '$0';
+                document.getElementById('lossRecovered').textContent = '$0';
+                document.getElementById('lossAmount').textContent = '$0';
+                document.getElementById('lossRemaining').textContent = '$5000';
+                // Panel GANANCIA
+                document.getElementById('gainInvested').textContent = '$0';
+                document.getElementById('gainRecovered').textContent = '$0';
+                document.getElementById('gainAmount').textContent = '$0';
+                document.getElementById('gainRemaining').textContent = '$5000';
+                // Detalle
+                document.getElementById('scenarioDetail').innerHTML = '<div style="color:#666;text-align:center;padding:20px;">Sin posiciones abiertas</div>';
+                return;
+            }
+            
+            // Calcular inversión ($5 por token en posición abierta)
+            const maxTokens = Math.floor(INITIAL_CAPITAL / tradeAmount);
+            const actualTokens = Math.min(tokensAnalyzed, maxTokens);
+            const totalInvested = actualTokens * tradeAmount;
+            
+            // ============ ESCENARIO PÉRDIDA ============
+            const lossPercent = -Math.abs(lossInputPercent); // Negativo
+            const lossRecovered = totalInvested * (1 + lossPercent / 100); // Lo que recuperas (menos)
+            const lossAmount = totalInvested - lossRecovered; // Lo que pierdes
+            const lossRemaining = INITIAL_CAPITAL - lossAmount; // Lo que queda en wallet
+            
+            document.getElementById('lossInvested').textContent = '$' + totalInvested.toFixed(2);
+            document.getElementById('lossRecovered').textContent = '$' + lossRecovered.toFixed(2);
+            document.getElementById('lossAmount').textContent = '-$' + lossAmount.toFixed(2);
+            document.getElementById('lossRemaining').textContent = '$' + lossRemaining.toFixed(2);
+            
+            // ============ ESCENARIO GANANCIA ============
+            const gainPercent = Math.abs(gainInputPercent); // Positivo
+            const gainRecovered = totalInvested * (1 + gainPercent / 100); // Lo que recuperas (más)
+            const gainAmount = gainRecovered - totalInvested; // Lo que ganas
+            const gainRemaining = INITIAL_CAPITAL - totalInvested + gainRecovered; // Lo que queda
+            
+            document.getElementById('gainInvested').textContent = '$' + totalInvested.toFixed(2);
+            document.getElementById('gainRecovered').textContent = '$' + gainRecovered.toFixed(2);
+            document.getElementById('gainAmount').textContent = '+$' + gainAmount.toFixed(2);
+            document.getElementById('gainRemaining').textContent = '$' + gainRemaining.toFixed(2);
+            
+            // ============ DETALLE POR TOKEN ============
+            let detailHTML = '';
+            openPositions.slice(0, actualTokens).forEach((p, i) => {
+                const entryPrice = tradeAmount; // $5
+                const lossResult = entryPrice * (1 + lossPercent / 100);
+                const gainResult = entryPrice * (1 + gainPercent / 100);
+                const lossDiff = lossResult - entryPrice;
+                const gainDiff = gainResult - entryPrice;
+                
+                detailHTML += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #1a1a25;font-size:0.75rem;">';
+                detailHTML += '<div><span style="color:#fff;font-weight:bold;">' + p.symbol + '</span> <span style="color:#666;">($5)</span></div>';
+                detailHTML += '<div style="text-align:right;">';
+                detailHTML += '<span style="color:#ff4444;margin-right:10px;">-' + Math.abs(lossDiff).toFixed(2) + '</span>';
+                detailHTML += '<span style="color:#00ff88;">+' + gainDiff.toFixed(2) + '</span>';
+                detailHTML += '</div></div>';
+            });
+            document.getElementById('scenarioDetail').innerHTML = detailHTML;
+        }
+        
+        loadState();
+        analyzeScenarios();
+        updateSalesSummary();
+        updateTrailingInfo();
+    </script>
+</body>
+</html>
