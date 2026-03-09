@@ -2,26 +2,25 @@
 
 Herramientas de trading para encontrar memecoins antes de que exploten.
 
-## 📱 Aplicaciones
+## 📱 Aplicaciones Incluidas
 
-### 1. Token Profile Scanner
+### 1. Token Profile Scanner (index.html)
 - Escanea tokens de DexScreener Token Profile
 - Simulador de inversión ($5 por token)
 - Venta automática en pérdida/ganancia
 - Trailing Stop integrado
-- Selección de redes blockchain
+- Selección de redes blockchain (SOL, ETH, BSC, etc.)
+- Resumen de ventas reales
+- Análisis de escenarios ($5000 capital)
 
-**Archivo:** `token-profile-scanner/index.html`
-
-### 2. Crypto Hunter Pro
+### 2. Crypto Hunter Pro (token-scanner.html)
 - Scanner en tiempo real de múltiples APIs
 - Alertas de volumen y precio
 - Notificaciones Push
 - Watchlist personal
 - Calculadora de ganancias
 - Diseño móvil optimizado
-
-**Archivo:** `crypto-hunter-pro/index.html`
+- Múltiples fuentes de datos
 
 ## 🚀 Cómo usar
 
